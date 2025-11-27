@@ -1,16 +1,42 @@
 require('dotenv').config();
 const mysql = require('mysql2/promise');
+const url = require('url'); // <-- agregado para parsear MYSQL_URL
 
-const dbConfig = {
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'manga_store',
-  port: process.env.DB_PORT || 3306,
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
-};
+let dbConfig;
+
+// Si Railway entrega MYSQL_URL, usarla
+if (process.env.MYSQL_URL) {
+  const dbUrl = url.parse(process.env.MYSQL_URL);
+  const [user, password] = dbUrl.auth.split(':');
+
+  dbConfig = {
+    host: dbUrl.hostname,
+    user,
+    password,
+    database: dbUrl.path.replace('/', ''),
+    port: dbUrl.port,
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
+  };
+
+  console.log("🔗 Using Railway MYSQL_URL configuration");
+}
+// Si no existe MYSQL_URL, usamos el .env local
+else {
+  dbConfig = {
+    host: process.env.DB_HOST || 'localhost',
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || '',
+    database: process.env.DB_NAME || 'manga_store',
+    port: process.env.DB_PORT || 3306,
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
+  };
+
+  console.log("🔗 Using LOCAL .env database configuration");
+}
 
 const pool = mysql.createPool(dbConfig);
 
@@ -55,7 +81,7 @@ async function createTables() {
       )
     `);
 
-    // Products (Mangas) table
+    // Products table
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS products (
         id INT AUTO_INCREMENT PRIMARY KEY,
