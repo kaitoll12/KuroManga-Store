@@ -43,6 +43,7 @@ const allowedOrigins = [
   "http://192.168.56.1:3000",
   "https://kuro-manga-store.vercel.app",
   "https://kuro-manga-store-git-kait-11864e-cristopher-bocanegras-projects.vercel.app"
+  "/^https:\/\/kuro-manga-store.*\.vercel\.app$/"
 ];
 
 app.use(cors({
