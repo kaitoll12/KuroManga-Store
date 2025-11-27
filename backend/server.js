@@ -42,21 +42,35 @@ const allowedOrigins = [
   "http://localhost:3000",
   "http://192.168.56.1:3000",
   "https://kuro-manga-store.vercel.app",
-  "https://kuro-manga-store-git-kait-11864e-cristopher-bocanegras-projects.vercel.app"
-  "/^https:\/\/kuro-manga-store.*\.vercel\.app$/"
+  "https://kuro-manga-store-git-kait-11864e-cristopher-bocanegras-projects.vercel.app",
+  "^https:\\/\\/kuro-manga-store.*\\.vercel\\.app$"
 ];
 
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
+
+    if (!origin) return callback(null, true);
+
+    const isAllowed = allowedOrigins.some((pattern) => {
+      if (pattern.startsWith("^")) {
+        // Es regex
+        return new RegExp(pattern).test(origin);
+      }
+      // Comparación normal
+      return pattern === origin;
+    });
+
+    if (isAllowed) {
       console.log("✔️ CORS permitido:", origin);
       return callback(null, true);
     }
+
     console.log("❌ CORS bloqueado:", origin);
     return callback(new Error("Not allowed by CORS"));
   },
   credentials: true
 }));
+
 
 /* ---------------------------- WEBHOOKS ------------------------------- */
 app.use('/api/webhooks', webhookRoutes);
