@@ -8,7 +8,7 @@ const morgan = require('morgan');
 
 const { testConnection, createTables } = require('./config/database');
 
-// Import routes
+// Routes
 const authRoutes = require('./routes/auth');
 const productRoutes = require('./routes/products');
 const cartRoutes = require('./routes/cart');
@@ -21,82 +21,62 @@ const checkoutRoutes = require('./routes/checkout');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-/* ---------------------------------------------------
-   🔐 SECURITY (Helmet + Morgan)
----------------------------------------------------- */
+/* ------------------------------ SECURITY ------------------------------ */
 app.use(helmet());
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
-/* ---------------------------------------------------
-   🌐 TRUST PROXY (OBLIGATORIO para Railway/Vercel)
----------------------------------------------------- */
+/* -------------------------- TRUST PROXY FIX --------------------------- */
 app.set("trust proxy", 1);
 
-/* ---------------------------------------------------
-   🚦 RATE LIMIT (arreglado)
-   Ya NO se bloqueará por "Too many requests"
----------------------------------------------------- */
+/* -------------------------- RATE LIMIT FIX --------------------------- */
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 min
-  max: 300,                // antes 100 → ahora más alto
+  windowMs: 15 * 60 * 1000,
+  max: 300,
   standardHeaders: true,
   legacyHeaders: false
 });
-
 app.use('/api/', limiter);
 
-/* ---------------------------------------------------
-   🌍 CORS CONFIG
----------------------------------------------------- */
+/* ------------------------------ CORS ---------------------------------- */
 const allowedOrigins = [
   "http://localhost:3000",
   "http://192.168.56.1:3000",
   "https://kuro-manga-store.vercel.app",
-  "https://kuro-manga-store-git-kait-11864e-cristopher-bocanegras-projects.vercel.app",
+  "https://kuro-manga-store-git-kait-11864e-cristopher-bocanegras-projects.vercel.app"
 ];
 
 app.use(cors({
-  origin: function (origin, callback) {
+  origin: (origin, callback) => {
     if (!origin || allowedOrigins.includes(origin)) {
-      console.log(`✔️ CORS permitido: ${origin}`);
+      console.log("✔️ CORS permitido:", origin);
       return callback(null, true);
     }
-    console.log(`❌ CORS bloqueado: ${origin}`);
+    console.log("❌ CORS bloqueado:", origin);
     return callback(new Error("Not allowed by CORS"));
   },
-  credentials: true,
+  credentials: true
 }));
 
-/* ---------------------------------------------------
-   💳 WEBHOOKS → deben ir ANTES del JSON parser
----------------------------------------------------- */
+/* ---------------------------- WEBHOOKS ------------------------------- */
 app.use('/api/webhooks', webhookRoutes);
 
-/* ---------------------------------------------------
-   📦 BODY PARSER
----------------------------------------------------- */
+/* ----------------------------- PARSERS -------------------------------- */
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-/* ---------------------------------------------------
-   📁 STATIC FILES
----------------------------------------------------- */
+/* ---------------------------- STATIC FILES ---------------------------- */
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-/* ---------------------------------------------------
-   ❤️ HEALTH CHECK
----------------------------------------------------- */
+/* ----------------------------- HEALTH -------------------------------- */
 app.get('/health', (req, res) => {
   res.json({
-    status: 'OK',
+    status: "OK",
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV || "development"
   });
 });
 
-/* ---------------------------------------------------
-   📚 API ROUTES
----------------------------------------------------- */
+/* ------------------------------ ROUTES -------------------------------- */
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/cart', cartRoutes);
@@ -105,43 +85,45 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/debug', debugRoutes);
 app.use('/api/checkout', checkoutRoutes);
 
-/* ---------------------------------------------------
-   ❌ ERROR HANDLER
----------------------------------------------------- */
+/* ---------------------------- ERROR HANDLER --------------------------- */
 app.use((err, req, res, next) => {
   console.error("🔥 INTERNAL ERROR:", err);
   res.status(500).json({
-    error: 'Something went wrong!',
-    message: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
+    error: "Internal server error",
+    message: process.env.NODE_ENV === "development" ? err.message : ""
   });
 });
 
-/* ---------------------------------------------------
-   ❓ 404 HANDLER
----------------------------------------------------- */
+/* ------------------------------ 404 ----------------------------------- */
 app.use('*', (req, res) => {
   res.status(404).json({
-    error: 'Route not found',
+    error: "Route not found",
     message: `Cannot ${req.method} ${req.originalUrl}`
   });
 });
 
-/* ---------------------------------------------------
-   🚀 START SERVER
----------------------------------------------------- */
+/* ----------------------------- START SERVER ---------------------------- */
 async function startServer() {
   try {
-    console.log('🚀 Starting Manga Store Backend...');
+    console.log("🚀 Starting Manga Store Backend...");
 
     await testConnection();
     await createTables();
 
     app.listen(PORT, () => {
       console.log(`✅ Server running on port ${PORT}`);
-      console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`🌐 Environment: ${process.env.NODE_ENV || "development"}`);
 
       console.log("📡 CORS habilitado para:");
-      allowedOrigins.forEach(o => console.log("   → " + o));
+      allowedOrigins.forEach(o => console.log(" → " + o));
     });
 
-  } catch (e
+  } catch (err) {
+    console.error("❌ Failed to start server:", err.message);
+    process.exit(1);
+  }
+}
+
+startServer();
+
+module.exports = app;
